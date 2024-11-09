@@ -19,36 +19,28 @@ jobs:
       uses: 'google-github-actions/auth@v1'
       with:
         credentials_json: '${{ secrets.GCP_SA_KEY }}'
+        service_account: 'nomads-laws-sa@nomads-laws.iam.gserviceaccount.com'
 
     - name: 'Set up Cloud SDK'
       uses: 'google-github-actions/setup-gcloud@v1'
-    
-    - name: 'Enable APIs'
-      run: |
-        # Enable Service Usage API
-        if ! gcloud services list --enabled | grep -q serviceusage.googleapis.com; then
-          gcloud services enable serviceusage.googleapis.com
-          # Wait a bit for propagation
-          sleep 20
-        fi
-        
-        # Enable other required services
-        gcloud services enable cloudbuild.googleapis.com
-        gcloud services enable run.googleapis.com
-        gcloud services enable artifactregistry.googleapis.com
 
+    - name: 'Set project'
+      run: |
+        gcloud config set project nomads-laws
+        gcloud config set run/region $REGION
+    
     - name: Configure Docker
       run: gcloud auth configure-docker
     
     - name: Build and Deploy
       run: |
-        gcloud builds submit --tag gcr.io/$PROJECT_ID/nomads-laws \
-          --project $PROJECT_ID
+        # Build using Cloud Build
+        gcloud builds submit --tag gcr.io/nomads-laws/nomads-laws
 
+        # Deploy to Cloud Run
         gcloud run deploy nomads-laws \
-          --image gcr.io/$PROJECT_ID/nomads-laws \
+          --image gcr.io/nomads-laws/nomads-laws \
           --platform managed \
           --region $REGION \
-          --project $PROJECT_ID \
           --allow-unauthenticated \
           --set-env-vars "GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}"
