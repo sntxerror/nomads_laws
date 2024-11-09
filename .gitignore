@@ -1,5 +1,5 @@
 venv/
-.env
-key.json
 __pycache__/
 *.pyc
+.env
+key.json

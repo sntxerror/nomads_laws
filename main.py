@@ -2,11 +2,10 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import google.generativeai as genai
 import os
-from dotenv import load_dotenv
 
-load_dotenv()
+app = FastAPI(title="Nomads Laws")
 
-app = FastAPI(title="Legal Assistant MVP")
+# Initialize Gemini
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 model = genai.GenerativeModel("gemini-1.5-pro")
 

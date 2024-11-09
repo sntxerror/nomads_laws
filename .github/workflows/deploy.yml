@@ -6,34 +6,40 @@ on:
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-  SERVICE_NAME: legal-assistant
+  SERVICE_NAME: nomads-laws
   REGION: us-central1
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-
-    - name: Set up Cloud SDK
-      uses: google-github-actions/setup-gcloud@v0
+    - uses: actions/checkout@v3
+    
+    - id: 'auth'
+      uses: 'google-github-actions/auth@v1'
       with:
-        project_id: ${{ secrets.GCP_PROJECT_ID }}
-        service_account_key: ${{ secrets.GCP_SA_KEY }}
-        export_default_credentials: true
+        credentials_json: '${{ secrets.GCP_SA_KEY }}'
 
-    - name: Authenticate Docker
-      run: gcloud auth configure-docker
-
-    - name: Build and Deploy to Cloud Run
+    - name: 'Set up Cloud SDK'
+      uses: 'google-github-actions/setup-gcloud@v1'
+    
+    - name: 'Enable APIs'
       run: |
-        # Build and submit container
-        gcloud builds submit --tag gcr.io/$PROJECT_ID/$SERVICE_NAME
+        gcloud services enable cloudbuild.googleapis.com
+        gcloud services enable run.googleapis.com
+    
+    - name: Configure Docker
+      run: gcloud auth configure-docker
+    
+    - name: Build and Deploy
+      run: |
+        gcloud builds submit --tag gcr.io/$PROJECT_ID/nomads-laws \
+          --project $PROJECT_ID
 
-        # Deploy to Cloud Run
-        gcloud run deploy $SERVICE_NAME \
-          --image gcr.io/$PROJECT_ID/$SERVICE_NAME \
+        gcloud run deploy nomads-laws \
+          --image gcr.io/$PROJECT_ID/nomads-laws \
           --platform managed \
           --region $REGION \
+          --project $PROJECT_ID \
           --allow-unauthenticated \
           --set-env-vars "GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}"
