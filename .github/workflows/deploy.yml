@@ -25,9 +25,18 @@ jobs:
     
     - name: 'Enable APIs'
       run: |
+        # Enable Service Usage API
+        if ! gcloud services list --enabled | grep -q serviceusage.googleapis.com; then
+          gcloud services enable serviceusage.googleapis.com
+          # Wait a bit for propagation
+          sleep 20
+        fi
+        
+        # Enable other required services
         gcloud services enable cloudbuild.googleapis.com
         gcloud services enable run.googleapis.com
-    
+        gcloud services enable artifactregistry.googleapis.com
+
     - name: Configure Docker
       run: gcloud auth configure-docker
     
