@@ -3,7 +3,6 @@ uvicorn
 google-generativeai
 python-telegram-bot
 python-dotenv
-numpy
-psycopg2-binary # For pgvector
-pydantic-settings
+google-cloud-aiplatform
 google-cloud-logging
+numpy
