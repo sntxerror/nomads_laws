@@ -1,9 +1,9 @@
-# app/main.py
 from fastapi import FastAPI, Request
-import logging
+import asyncio
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters
 from google.cloud import logging as cloud_logging
+import logging
 from .core.config import settings
 from .core.embeddings import EmbeddingsManager
 from .services.gemini import GeminiService
@@ -28,7 +28,6 @@ telegram_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, bot_han
 
 @app.on_event("startup")
 async def startup_event():
-    """Startup tasks"""
     try:
         logger.info("Starting application...")
         
@@ -49,7 +48,7 @@ async def startup_event():
             logger.error(f"Failed to load document: {str(e)}")
             raise
 
-        # Initialize bot webhook
+        # Set webhook
         webhook_url = f"https://{settings.CLOUD_RUN_URL}/telegram-webhook"
         await telegram_app.bot.set_webhook(webhook_url)
         logger.info(f"Set webhook URL to: {webhook_url}")
@@ -60,31 +59,22 @@ async def startup_event():
 
 @app.post("/telegram-webhook")
 async def telegram_webhook(request: Request):
-    """Handle Telegram webhook requests"""
     try:
-        # Get update from Telegram
         update_data = await request.json()
         update = Update.de_json(update_data, telegram_app.bot)
-        
-        # Process update
         await telegram_app.process_update(update)
         return {"status": "ok"}
-        
     except Exception as e:
         logger.error(f"Error processing webhook: {str(e)}")
         return {"status": "error", "message": str(e)}
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
     try:
-        # Check webhook info
         webhook_info = await telegram_app.bot.get_webhook_info()
         webhook_status = {
             "url": webhook_info.url,
-            "pending_updates": webhook_info.pending_update_count,
-            "last_error": webhook_info.last_error_date,
-            "last_error_message": webhook_info.last_error_message
+            "pending_updates": webhook_info.pending_update_count
         }
         
         vector_status = await embeddings_manager.check_status()
@@ -97,3 +87,15 @@ async def health_check():
     except Exception as e:
         logger.error(f"Health check failed: {str(e)}")
         return {"status": "error", "message": str(e)}
+
+@app.get("/debug")
+async def debug_info():
+    return {
+        "vector_search_status": await embeddings_manager.check_status(),
+        "webhook_info": await telegram_app.bot.get_webhook_info(),
+        "settings": {
+            "endpoint": settings.VECTOR_SEARCH_ENDPOINT,
+            "model": settings.EMBEDDING_MODEL,
+            "chunk_size": settings.CHUNK_SIZE
+        }
+    }

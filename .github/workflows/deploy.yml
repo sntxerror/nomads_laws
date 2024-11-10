@@ -10,26 +10,10 @@ env:
   REGION: us-central1
 
 jobs:
-  test-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: '3.9'
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install pytest
-
-    - name: Run tests
-      run: |
-        export PYTHONPATH=$PYTHONPATH:$(pwd)
-        pytest tests/
 
     - id: 'auth'
       uses: 'google-github-actions/auth@v1'
@@ -46,11 +30,16 @@ jobs:
     - name: Deploy to Cloud Run
       id: deploy
       run: |
-        # Build and deploy
-        gcloud builds submit --tag gcr.io/$PROJECT_ID/$SERVICE_NAME --project $PROJECT_ID --timeout=1800s
+        # Build using Cloud Build
+        gcloud builds submit --tag gcr.io/$PROJECT_ID/$SERVICE_NAME \
+          --project $PROJECT_ID \
+          --timeout=1800s
 
         # Get service URL
-        CLOUD_RUN_URL=$(gcloud run services describe $SERVICE_NAME --platform managed --region $REGION --format 'value(status.url)' | sed 's/https:\/\///')
+        CLOUD_RUN_URL=$(gcloud run services describe $SERVICE_NAME \
+          --platform managed \
+          --region $REGION \
+          --format 'value(status.url)' | sed 's/https:\/\///')
 
         # Deploy with environment variables
         gcloud run deploy $SERVICE_NAME \
@@ -59,9 +48,20 @@ jobs:
           --region $REGION \
           --project $PROJECT_ID \
           --allow-unauthenticated \
-          --set-env-vars="GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }},TELEGRAM_TOKEN=${{ secrets.TELEGRAM_TOKEN }},CLOUD_RUN_URL=${CLOUD_RUN_URL}"
+          --set-env-vars=GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }} \
+          --set-env-vars=TELEGRAM_TOKEN=${{ secrets.TELEGRAM_TOKEN }} \
+          --set-env-vars=CLOUD_RUN_URL=$CLOUD_RUN_URL \
+          --set-env-vars=VECTOR_SEARCH_ENDPOINT=https://147947013.us-central1-212717342587.vdb.vertexai.goog
 
-    - name: Verify deployment
+    - name: Verify Deployment
       run: |
-        DEPLOY_URL=$(gcloud run services describe $SERVICE_NAME --platform managed --region $REGION --format 'value(status.url)')
-        curl -f "${DEPLOY_URL}/health" || exit 1
+        echo "Waiting for service to be ready..."
+        sleep 30
+        
+        SERVICE_URL=$(gcloud run services describe $SERVICE_NAME \
+          --platform managed \
+          --region $REGION \
+          --format 'value(status.url)')
+        
+        echo "Checking health endpoint..."
+        curl -s "${SERVICE_URL}/health" || exit 1

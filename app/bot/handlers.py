@@ -20,15 +20,9 @@ class BotHandlers:
             question = update.message.text
             logger.info(f"Received question from user {user_id}: {question}")
 
-            # Send typing action
             await update.message.chat.send_action("typing")
-            
-            # Get answer
             answer = await self.gemini.ask_legal_question(question)
-            
-            # Send response
             await update.message.reply_text(answer)
-            logger.info(f"Sent answer to user {user_id}")
             
         except Exception as e:
             logger.error(f"Error handling message: {str(e)}")

@@ -10,15 +10,9 @@ class GeminiService:
         self.model = genai.GenerativeModel("gemini-1.5-pro")
         self.embeddings_manager = embeddings_manager
         
-    async def ask_legal_question(
-        self,
-        question: str,
-        country: str = settings.DEFAULT_COUNTRY,
-        law_type: str = settings.DEFAULT_LAW_TYPE,
-        language: str = settings.DEFAULT_LANGUAGE
-    ) -> str:
+    async def ask_legal_question(self, question: str, country: str = settings.DEFAULT_COUNTRY,
+                               law_type: str = settings.DEFAULT_LAW_TYPE, language: str = settings.DEFAULT_LANGUAGE) -> str:
         try:
-            # Get relevant context
             relevant_chunks = await self.embeddings_manager.get_relevant_context(
                 query=question,
                 country=country,
@@ -37,9 +31,7 @@ class GeminiService:
             
             {context}
             
-            Question: {question}
-            
-            Provide a clear, concise answer with specific references to the law where possible."""
+            Question: {question}"""
 
             response = self.model.generate_content(prompt)
             return response.text
