@@ -1,13 +1,15 @@
 import google.generativeai as genai
-from google.cloud import aiplatform
+from google.cloud import aiplatform, logging as cloud_logging
 import numpy as np
-import logging
 from typing import List, Dict
 from ..core.config import settings
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+# Set up Google Cloud Logging
+cloud_client = cloud_logging.Client()
+cloud_client.setup_logging()
+
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 class EmbeddingsManager:
     def __init__(self, settings):

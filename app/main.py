@@ -1,20 +1,24 @@
-import logging
 from fastapi import FastAPI
 import asyncio
 from telegram.ext import Application, CommandHandler, MessageHandler, filters
+from google.cloud import logging as cloud_logging
 from .core.config import settings
 from .bot.handlers import BotHandlers
 from .services.gemini import GeminiService
 from .core.embeddings import EmbeddingsManager
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+# Set up Google Cloud Logging
+cloud_client = cloud_logging.Client()
+cloud_client.setup_logging()
+
+# Standard logging configuration
+import logging
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Nomads Laws")
 handlers = BotHandlers()
 gemini_service = GeminiService()
-embeddings_manager = EmbeddingsManager(settings)  # Explicitly initialize EmbeddingsManager
+embeddings_manager = EmbeddingsManager(settings)
 
 @app.on_event("startup")
 async def startup_event():

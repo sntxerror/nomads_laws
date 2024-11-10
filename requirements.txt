@@ -6,3 +6,4 @@ python-dotenv
 numpy
 psycopg2-binary # For pgvector
 pydantic-settings
+google-cloud-logging
