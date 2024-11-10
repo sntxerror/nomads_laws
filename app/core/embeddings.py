@@ -10,10 +10,23 @@ class EmbeddingsManager:
     def __init__(self, settings):
         self.settings = settings
         genai.configure(api_key=settings.GOOGLE_API_KEY)
-        aiplatform.init(project='nomads-laws')
-        self.vector_search_client = aiplatform.MatchingEngineIndexEndpoint(
-            index_endpoint_name=settings.VECTOR_SEARCH_ENDPOINT
+        
+        # Initialize Vertex AI properly
+        aiplatform.init(
+            project='nomads-laws',
+            location='us-central1'
         )
+        
+        # Get only the endpoint ID from the full URL
+        endpoint_id = settings.VECTOR_SEARCH_ENDPOINT.split('/')[-1].split('.')[0]
+        
+        # Create the endpoint path
+        endpoint_path = f"projects/nomads-laws/locations/us-central1/indexEndpoints/{endpoint_id}"
+        
+        self.vector_search_client = aiplatform.MatchingEngineIndexEndpoint(
+            index_endpoint_name=endpoint_path
+        )
+        logger.info(f"Initialized EmbeddingsManager with endpoint: {endpoint_path}")
 
     async def load_document(self, content: str, country: str, law_type: str, language: str):
         try:
@@ -40,6 +53,7 @@ class EmbeddingsManager:
                 })
 
             self._upload_embeddings(embeddings_data)
+            logger.info("Successfully uploaded embeddings")
 
         except Exception as e:
             logger.error(f"Error in load_document: {str(e)}")

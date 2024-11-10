@@ -7,6 +7,8 @@ class Settings(BaseSettings):
     GOOGLE_API_KEY: str
     TELEGRAM_TOKEN: str
     VECTOR_SEARCH_ENDPOINT: str = "https://147947013.us-central1-212717342587.vdb.vertexai.goog"
+    PROJECT_ID: str = "nomads-laws"
+    LOCATION: str = "us-central1"
     
     DEFAULT_LANGUAGE: str = "ru"
     DEFAULT_COUNTRY: str = "georgia"
