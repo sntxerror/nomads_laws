@@ -12,6 +12,7 @@ from .bot.handlers import BotHandlers
 # Setup logging
 cloud_client = cloud_logging.Client()
 cloud_client.setup_logging()
+
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Nomads Laws")
@@ -37,32 +38,57 @@ async def startup_event():
                 content = f.read()
                 logger.info(f"Loaded tax law document: {len(content)} characters")
             
-            await embeddings_manager.load_document(
+            success = await embeddings_manager.load_document(
                 content=content,
                 country=settings.DEFAULT_COUNTRY,
                 law_type=settings.DEFAULT_LAW_TYPE,
                 language=settings.DEFAULT_LANGUAGE
             )
-            logger.info("Successfully loaded document into Vector Search")
+            if success:
+                logger.info("Document processing complete")
+            else:
+                logger.warning("Document processing completed with errors")
         except Exception as e:
-            logger.error(f"Failed to load document: {str(e)}")
-            raise
-
-        # Set webhook
-        webhook_url = f"https://{settings.CLOUD_RUN_URL}/telegram-webhook"
-        await telegram_app.bot.set_webhook(webhook_url)
-        logger.info(f"Set webhook URL to: {webhook_url}")
+            logger.error(f"Failed to process document: {str(e)}")
+            # Continue startup even if document processing fails
         
+        # Setup and verify webhook
+        webhook_url = f"https://{settings.CLOUD_RUN_URL}/telegram-webhook"
+        
+        # Get current webhook info
+        webhook_info = await telegram_app.bot.get_webhook_info()
+        current_url = webhook_info.url
+
+        if current_url != webhook_url:
+            # Delete old webhook if exists
+            if current_url:
+                await telegram_app.bot.delete_webhook()
+                logger.info(f"Deleted old webhook: {current_url}")
+
+            # Set new webhook
+            await telegram_app.bot.set_webhook(
+                url=webhook_url,
+                allowed_updates=['message', 'callback_query'],
+                drop_pending_updates=True
+            )
+            logger.info(f"Set webhook URL to: {webhook_url}")
+        else:
+            logger.info(f"Webhook already set to correct URL: {webhook_url}")
+
     except Exception as e:
-        logger.error(f"Startup failed: {str(e)}")
-        raise
+        logger.error(f"Startup error: {str(e)}")
+        # Don't raise exception to allow partial functionality
 
 @app.post("/telegram-webhook")
 async def telegram_webhook(request: Request):
+    """Handle Telegram webhook requests"""
     try:
         update_data = await request.json()
+        logger.info(f"Received webhook update: {update_data.get('update_id')}")
+        
         update = Update.de_json(update_data, telegram_app.bot)
         await telegram_app.process_update(update)
+        
         return {"status": "ok"}
     except Exception as e:
         logger.error(f"Error processing webhook: {str(e)}")
@@ -74,7 +100,9 @@ async def health_check():
         webhook_info = await telegram_app.bot.get_webhook_info()
         webhook_status = {
             "url": webhook_info.url,
-            "pending_updates": webhook_info.pending_update_count
+            "pending_updates": webhook_info.pending_update_count,
+            "last_error": webhook_info.last_error_date,
+            "last_error_message": webhook_info.last_error_message
         }
         
         vector_status = await embeddings_manager.check_status()
@@ -90,6 +118,7 @@ async def health_check():
 
 @app.get("/debug")
 async def debug_info():
+    """Endpoint to check system status"""
     return {
         "vector_search_status": await embeddings_manager.check_status(),
         "webhook_info": await telegram_app.bot.get_webhook_info(),
