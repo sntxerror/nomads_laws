@@ -1,9 +1,12 @@
-from pydantic_settings import BaseSettings
+try:
+    from pydantic_settings import BaseSettings
+except ImportError:
+    from pydantic import BaseSettings
 
 class Settings(BaseSettings):
     GOOGLE_API_KEY: str
     TELEGRAM_TOKEN: str
-    VECTOR_SEARCH_ENDPOINT: str
+    VECTOR_SEARCH_ENDPOINT: str = "https://147947013.us-central1-212717342587.vdb.vertexai.goog"
     
     DEFAULT_LANGUAGE: str = "ru"
     DEFAULT_COUNTRY: str = "georgia"
