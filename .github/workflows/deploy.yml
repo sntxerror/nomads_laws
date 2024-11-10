@@ -41,7 +41,7 @@ jobs:
           --region $REGION \
           --format 'value(status.url)' | sed 's/https:\/\///')
 
-        # Deploy with environment variables
+        # Deploy with environment variables from secrets
         gcloud run deploy $SERVICE_NAME \
           --image gcr.io/$PROJECT_ID/$SERVICE_NAME \
           --platform managed \
@@ -51,17 +51,4 @@ jobs:
           --set-env-vars=GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }} \
           --set-env-vars=TELEGRAM_TOKEN=${{ secrets.TELEGRAM_TOKEN }} \
           --set-env-vars=CLOUD_RUN_URL=$CLOUD_RUN_URL \
-          --set-env-vars=VECTOR_SEARCH_ENDPOINT=https://147947013.us-central1-212717342587.vdb.vertexai.goog
-
-    - name: Verify Deployment
-      run: |
-        echo "Waiting for service to be ready..."
-        sleep 30
-        
-        SERVICE_URL=$(gcloud run services describe $SERVICE_NAME \
-          --platform managed \
-          --region $REGION \
-          --format 'value(status.url)')
-        
-        echo "Checking health endpoint..."
-        curl -s "${SERVICE_URL}/health" || exit 1
+          --set-env-vars=VECTOR_SEARCH_ENDPOINT=${{ secrets.VECTOR_SEARCH_ENDPOINT }}

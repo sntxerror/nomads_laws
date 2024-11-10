@@ -6,7 +6,8 @@ except ImportError:
 class Settings(BaseSettings):
     GOOGLE_API_KEY: str
     TELEGRAM_TOKEN: str
-    VECTOR_SEARCH_ENDPOINT: str = "https://147947013.us-central1-212717342587.vdb.vertexai.goog"
+    # Use full resource name instead of URL
+    VECTOR_SEARCH_ENDPOINT: str = "projects/212717342587/locations/us-central1/indexEndpoints/147947013"
     PROJECT_ID: str = "nomads-laws"
     LOCATION: str = "us-central1"
     
